@@ -6,7 +6,7 @@ clone = require('clone')
 async = require('async')
 port = process.env.PORT || 5000
 server = http.createServer().listen port
-console.log "svt stats server running on #{port}"
+console.log "svt stats server is running on #{port}"
 
 
 default_options =
