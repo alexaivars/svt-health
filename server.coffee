@@ -75,10 +75,10 @@ class Validator extends events.EventEmitter
 svtse = new Validator()
 svtse.on "success", (data,header) ->
   metrics =
-    lab:
+    prod:
       markup : {}
   for obj in data
-    m = metrics.lab.markup[url_to_str(obj.url)] = {}
+    m = metrics.prod.markup[url_to_str(obj.url)] = {}
     for key,val of obj.summary
       m[key] = val
 

@@ -120,13 +120,13 @@ svtse = new Validator();
 svtse.on("success", function(data, header) {
   var key, m, metrics, obj, val, _i, _len, _ref;
   metrics = {
-    lab: {
+    prod: {
       markup: {}
     }
   };
   for (_i = 0, _len = data.length; _i < _len; _i++) {
     obj = data[_i];
-    m = metrics.lab.markup[url_to_str(obj.url)] = {};
+    m = metrics.prod.markup[url_to_str(obj.url)] = {};
     _ref = obj.summary;
     for (key in _ref) {
       val = _ref[key];
