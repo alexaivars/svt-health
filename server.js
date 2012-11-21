@@ -61,7 +61,7 @@ server.on("request", function(req, res) {
   mDate = new Date();
   if (mDate.getTime() >= eDate.getTime()) {
     console.log("new");
-    return async.map(["http://svt.se", "http://svt.se/nyheter", "http://www.svt.se/barnkanalen/", "http://www.svt.se/ug/"], task, function(err, results) {
+    return async.map(["http://svt.se", "http://svt.se/nyheter", "http://www.svt.se/barnkanalen/", "http://www.svt.se/ug/", "http://www.svtplay.se/"], task, function(err, results) {
       var body, header;
       mDate = new Date();
       eDate.setTime(mDate.getTime() + 600 * 1000);
