@@ -16,7 +16,6 @@ default_options =
     output: "json"
     uri: "http://svt.se"
 
-
 task = (uri,callback) ->
   options = clone default_options
   options.qs.uri = uri
@@ -35,23 +34,29 @@ task = (uri,callback) ->
       callback error, result
   return
 
-mDate = new Date()
 eDate = new Date()
-# eDate.setTime( mDate.getTime() + 600 * 1000)
+cache = null
 
 server.on "request", (req, res) ->
   console.log "request"
-  async.map ["http://svt.se","http://svt.se/nyheter","http://svt.se/vader"], task, (err, results) ->
-    mDate = new Date()
-    eDate.setTime( mDate.getTime() + 600 * 1000)
-    body = JSON.stringify(results)
-    console.log body
-    cache = body
-    header =
-      'Content-Type': 'application/json; charset=utf-8'
-      'Cache-Control': 'max-age=600, public'
-      'Last-Modified' : mDate
-      'Expires' : eDate
-    res.writeHead(200, header)
+  mDate = new Date()
+  if mDate.getTime() >= eDate.getTime()
+    console.log "new"
+    async.map ["http://svt.se","http://svt.se/nyheter","http://www.svt.se/barnkanalen/","http://www.svt.se/ug/"], task, (err, results) ->
+      mDate = new Date()
+      eDate.setTime( mDate.getTime() + 600 * 1000)
+      body = JSON.stringify(results)
+      console.log body
+      cache = body
+      header =
+        'Content-Type': 'application/json; charset=utf-8'
+        'Cache-Control': 'max-age=600, public'
+        'Last-Modified' : mDate
+        'Expires' : eDate
+      res.writeHead(200, header)
+      res.write cache
+      res.end()
+  else
     res.write cache
     res.end()
+
