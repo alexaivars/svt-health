@@ -31,8 +31,9 @@ task = (uri,callback) ->
         errors: response.headers["x-w3c-validator-errors"]
         warnings: response.headers["x-w3c-validator-warnings"]
     if (!error && response.statusCode == 200)
-      # callback null, JSON.parse(body)
       result.url = JSON.parse(body).url
+      result.json = response.request.href
+      result.html = response.request.href.replace("output=json&","")
       callback null, result
     else
       callback error, result
@@ -84,21 +85,28 @@ svtse.on "success", (data,header) ->
 
   console.log metrics
   client.write metrics, (err) ->
-    console.log err
+    if err == null
+      console.log "problem posting to graphite server"
     client.end()
 
 
 server.on "request", (req, res) ->
-  console.log "request"
+  params = url.parse(req.url, true).query
+  jsonp = params.callback
+  console.log jsonp 
   if svtse.mdate.getTime() >= svtse.edate.getTime()
     console.log "new"
     svtse.load (body,header) ->
       res.writeHead 200, header
+      if jsonp then res.write jsonp + " ("
       res.write JSON.stringify(body)
+      if jsonp then res.write ");"
       res.end()
   else
     res.writeHead 200, svtse.header()
+    if jsonp then res.write jsonp + " ("
     res.write JSON.stringify(svtse.cache)
+    if jsonp then res.write ");"
     res.end()
 
 svtse.load()
@@ -106,5 +114,3 @@ setInterval () ->
   console.log "ok"
   svtse.load()
 , 600000
-
-
