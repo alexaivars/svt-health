@@ -5,9 +5,13 @@ request = require('request')
 clone = require('clone')
 async = require('async')
 port = process.env.PORT || 5000
-server = http.createServer().listen port
 console.log "svt stats server is running on #{port}"
+graphite = require('graphite')
+events = require('events')
+util = require('util')
 
+server = http.createServer().listen port
+client = graphite.createClient('plaintext://graphite.svti.svt.se:2003/')
 
 default_options =
   proxy: process.env.HTTP_PROXY || ""
@@ -34,29 +38,73 @@ task = (uri,callback) ->
       callback error, result
   return
 
-eDate = new Date()
-cache = null
+url_to_str = (url) ->
+  url = url.replace(/(http:\/\/www\.)|(http:\/\/)|\s|(\/$)/g,'') # clean the urls
+  url.replace(/\/|\./g,'-')
+
+class Validator extends events.EventEmitter
+  constructor: ->
+    @mdate = new Date()
+    @edate = new Date()
+    @edate.setTime @mdate.getTime()
+    @cache = null
+    return
+  load: (callback) ->
+    @mdate = new Date()
+    if @mdate.getTime() >= @edate.getTime()
+      async.map ["http://svt.se","http://svt.se/nyheter","http://svt.se/barnkanalen","http://svt.se/ug","http://svtplay.se"], task, (err, results) =>
+        @mdate = new Date()
+        @edate.setTime( @mdate.getTime() + 600 * 1000)
+        @cache = results
+        @emit "new", @cache, @header()
+        @emit "success", @cache, @header()
+        if callback
+          callback.call @, @cache, @header
+    else
+      if callback
+        callback.call @, @cache, @header
+      @emit "success", @cache, @header()
+    return @
+  header: ->
+    data =
+      'Content-Type': 'application/json; charset=utf-8'
+      'Cache-Control': 'max-age=600, public'
+      'Last-Modified' : @mdate
+      'Expires' : @edate
+
+svtse = new Validator()
+svtse.on "success", (data,header) ->
+  metrics =
+    lab:
+      markup : {}
+  for obj in data
+    m = metrics.lab.markup[url_to_str(obj.url)] = {}
+    for key,val of obj.summary
+      m[key] = val
+
+  console.log metrics
+  client.write metrics, (err) ->
+    console.log err
+    client.end()
+
 
 server.on "request", (req, res) ->
   console.log "request"
-  mDate = new Date()
-  if mDate.getTime() >= eDate.getTime()
+  if svtse.mdate.getTime() >= svtse.edate.getTime()
     console.log "new"
-    async.map ["http://svt.se","http://svt.se/nyheter","http://www.svt.se/barnkanalen/","http://www.svt.se/ug/","http://www.svtplay.se/"], task, (err, results) ->
-      mDate = new Date()
-      eDate.setTime( mDate.getTime() + 600 * 1000)
-      body = JSON.stringify(results)
-      console.log body
-      cache = body
-      header =
-        'Content-Type': 'application/json; charset=utf-8'
-        'Cache-Control': 'max-age=600, public'
-        'Last-Modified' : mDate
-        'Expires' : eDate
-      res.writeHead(200, header)
-      res.write cache
+    svtse.load (body,header) ->
+      res.writeHead 200, header
+      res.write JSON.stringify(body)
       res.end()
   else
-    res.write cache
+    res.writeHead 200, svtse.header()
+    res.write JSON.stringify(svtse.cache)
     res.end()
+
+svtse.load()
+setInterval () ->
+  console.log "ok"
+  svtse.load()
+, 600000
+
 
