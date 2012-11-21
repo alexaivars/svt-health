@@ -42,7 +42,7 @@ server.on "request", (req, res) ->
   mDate = new Date()
   if mDate.getTime() >= eDate.getTime()
     console.log "new"
-    async.map ["http://svt.se","http://svt.se/nyheter","http://www.svt.se/barnkanalen/","http://www.svt.se/ug/"], task, (err, results) ->
+    async.map ["http://svt.se","http://svt.se/nyheter","http://www.svt.se/barnkanalen/","http://www.svt.se/ug/","http://www.svtplay.se/"], task, (err, results) ->
       mDate = new Date()
       eDate.setTime( mDate.getTime() + 600 * 1000)
       body = JSON.stringify(results)
